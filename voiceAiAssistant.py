@@ -19,6 +19,17 @@ import subprocess
 import json
 import jsonstreams
 
+from gtts import gTTS
+from io import BytesIO
+from pygame import mixer
+import time
+
+def speak(testo):
+    mp3_fp = BytesIO()
+    tts = gTTS(testo, lang='it')
+    tts.write_to_fp(mp3_fp)
+    return mp3_fp
+
 def generate_stream_json_response(prompt):
     data = json.dumps({"model": "openhermes", "prompt": prompt})
     process = subprocess.Popen(["curl", "-X", "POST", "-d", data, "http://localhost:11434/api/generate"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -57,7 +68,10 @@ def get_user_input_and_generate(prmt):
 
 if __name__ == '__main__':   
     # Init text 2 speech
-    engine = pyttsx3.init()
+    #engine = pyttsx3.init()
+    engine = pyttsx3.init("espeak")
+    engine.setProperty('voice', 'italian+f1')
+    engine.setProperty('rate', 160)
     # Listen for audio input
     while True:
         # Init speech recognizer
@@ -69,13 +83,20 @@ if __name__ == '__main__':
         # Recognize the audio
         try:
             response_text = ""
-            prompt = r.recognize_google(audio, language="en-EN", show_all=False)
+            #prompt = r.recognize_sphinx(audio)
+            prompt = r.recognize_google(audio, language="it", show_all=False) 
             print("You asked:", prompt)
             # Generate AI response
             response_text = get_user_input_and_generate(prompt)
             # Speak the response
-            engine.say(response_text)
-            engine.runAndWait()
+            mixer.init()
+            sound = speak(response_text)
+            sound.seek(0)
+            mixer.music.load(sound, "mp3")
+            mixer.music.play()
+            time.sleep(1)
+            #engine.say(response_text)
+            #engine.runAndWait()
         # Catch if error
         except Exception as error:
             # handle the exception
